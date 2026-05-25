@@ -1,0 +1,671 @@
+{% extends 'base.html' %}
+
+{% block title %}数据概览 - 数字化航图平台{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-header {
+        background: linear-gradient(135deg, #0066cc 0%, #004d99 100%);
+        color: white;
+        padding: 24px 30px;
+        border-radius: 12px;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 15px rgba(0, 102, 204, 0.3);
+    }
+
+    .dashboard-header h1 {
+        font-size: 28px;
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+
+    .dashboard-header p {
+        opacity: 0.9;
+        margin: 0;
+    }
+
+    .welcome-badge {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 8px 16px;
+        border-radius: 20px;
+        display: inline-block;
+        margin-top: 12px;
+    }
+
+    .quick-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .quick-action-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        text-decoration: none;
+        color: #333;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        border: 1px solid #eee;
+    }
+
+    .quick-action-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        border-color: #0066cc;
+    }
+
+    .quick-action-card i {
+        font-size: 32px;
+        color: #0066cc;
+        margin-bottom: 12px;
+    }
+
+    .quick-action-card h5 {
+        font-size: 14px;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .chart-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        margin-bottom: 24px;
+        border: 1px solid #eee;
+        overflow: hidden;
+    }
+
+    .chart-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .chart-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #2c3e50;
+        margin: 0;
+    }
+
+    .chart-title i {
+        color: #0066cc;
+        margin-right: 8px;
+    }
+
+    .chart-body {
+        padding: 20px;
+    }
+
+    .recent-data-table {
+        margin-bottom: 0;
+    }
+
+    .recent-data-table thead th {
+        background: #f8f9fa;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 12px 16px;
+    }
+
+    .recent-data-table tbody td {
+        padding: 12px 16px;
+        font-size: 13px;
+    }
+
+    .status-badge {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 500;
+    }
+
+    .status-active {
+        background: rgba(40, 167, 69, 0.1);
+        color: #28a745;
+    }
+
+    .status-inactive {
+        background: rgba(220, 53, 69, 0.1);
+        color: #dc3545;
+    }
+
+    .status-pending {
+        background: rgba(255, 193, 7, 0.1);
+        color: #d39e00;
+    }
+
+    .system-info {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        border: 1px solid #eee;
+    }
+
+    .system-info-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .system-info-item:last-child {
+        border-bottom: none;
+    }
+
+    .system-info-label {
+        color: #6c757d;
+        font-size: 13px;
+    }
+
+    .system-info-value {
+        font-weight: 500;
+        color: #2c3e50;
+    }
+
+    .activity-timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+
+    .activity-timeline::before {
+        content: '';
+        position: absolute;
+        left: 10px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #e9ecef;
+    }
+
+    .activity-item {
+        position: relative;
+        padding-bottom: 20px;
+    }
+
+    .activity-item:last-child {
+        padding-bottom: 0;
+    }
+
+    .activity-item::before {
+        content: '';
+        position: absolute;
+        left: -24px;
+        top: 4px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #0066cc;
+        border: 2px solid white;
+        box-shadow: 0 0 0 2px #0066cc;
+    }
+
+    .activity-time {
+        font-size: 11px;
+        color: #adb5bd;
+        margin-bottom: 4px;
+    }
+
+    .activity-content {
+        font-size: 13px;
+        color: #495057;
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-header {
+            padding: 20px;
+        }
+
+        .dashboard-header h1 {
+            font-size: 22px;
+        }
+
+        .quick-actions {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <h1><i class="fas fa-tachometer-alt"></i> 数据概览</h1>
+    <p>欢迎回来，{{ session.get('username', '用户') }}！这里是数字化航图平台的数据统计中心。</p>
+    <div class="welcome-badge">
+        <i class="far fa-clock"></i> {{ now.strftime('%Y年%m月%d日 %H:%M') }}
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="stats-cards">
+            <div class="stat-card">
+                <div class="stat-icon blue">
+                    <i class="fas fa-map-marker-alt"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>{{ waypoint_count }}</h3>
+                    <p>航路点总数</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon green">
+                    <i class="fas fa-route"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>{{ route_count }}</h3>
+                    <p>航线总数</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon orange">
+                    <i class="fas fa-broadcast-tower"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>{{ navaid_count }}</h3>
+                    <p>导航台数量</p>
+                </div>
+            </div>
+            {% if session.get('is_admin') %}
+            <div class="stat-card">
+                <div class="stat-icon red">
+                    <i class="fas fa-history"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>{{ log_count }}</h3>
+                    <p>变更日志</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="quick-actions">
+            <a href="{{ url_for('data_view', table='Waypoint') }}" class="quick-action-card">
+                <i class="fas fa-map-marked-alt"></i>
+                <h5>查看航路点</h5>
+            </a>
+            {% if session.get('is_admin') %}
+            <a href="{{ url_for('data_manage', table='Waypoint', action='add') }}" class="quick-action-card">
+                <i class="fas fa-plus-circle"></i>
+                <h5>添加航路点</h5>
+            </a>
+            {% endif %}
+            <a href="{{ url_for('data_view', table='Route') }}" class="quick-action-card">
+                <i class="fas fa-route"></i>
+                <h5>查看航线</h5>
+            </a>
+            <a href="{{ url_for('draw_page') }}" class="quick-action-card">
+                <i class="fas fa-globe-asia"></i>
+                <h5>地图可视化</h5>
+            </a>
+            <a href="{{ url_for('graph.graph_redact_page') }}" class="quick-action-card">
+                <i class="fas fa-draw-polygon"></i>
+                <h5>地图编辑</h5>
+            </a>
+        </div>
+
+        <div class="chart-card">
+            <div class="chart-header">
+                <h4 class="chart-title"><i class="fas fa-chart-bar"></i> 航路点类型分布</h4>
+            </div>
+            <div class="chart-body">
+                <div id="waypointTypeChart" style="height: 300px;"></div>
+            </div>
+        </div>
+
+        <!-- 航路航段统计 -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <h4 class="chart-title"><i class="fas fa-route"></i> 航路航段统计</h4>
+            </div>
+            <div class="chart-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div id="routeTypeDistributionChart" style="height: 250px;"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <div id="segmentDirectionChart" style="height: 250px;"></div>
+                    </div>
+                </div>
+                <div class="row mt-4">
+                    <div class="col-md-12">
+                        <div id="routeSegmentCountChart" style="height: 300px;"></div>
+                    </div>
+                </div>
+                <div class="row mt-4">
+                    <div class="col-md-4">
+                        <div class="stat-card">
+                            <div class="stat-value" id="totalRoutes">0</div>
+                            <div class="stat-label">总航路数</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stat-card">
+                            <div class="stat-value" id="totalSegments">0</div>
+                            <div class="stat-label">总航段数</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stat-card">
+                            <div class="stat-value" id="avgRouteDistance">0</div>
+                            <div class="stat-label">平均航路距离 (KM)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h4 class="chart-title"><i class="fas fa-chart-pie"></i> 航线类型分布</h4>
+                    </div>
+                    <div class="chart-body">
+                        <div id="routeTypeChart" style="height: 250px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="system-info">
+            <h5 class="mb-3"><i class="fas fa-server"></i> 系统信息</h5>
+            <div class="system-info-item">
+                <span class="system-info-label">数据库版本</span>
+                <span class="system-info-value">SQLite {{ sqlite_version }}</span>
+            </div>
+            <div class="system-info-item">
+                <span class="system-info-label">航路点表</span>
+                <span class="system-info-value">{{ waypoint_count }} 条记录</span>
+            </div>
+            <div class="system-info-item">
+                <span class="system-info-label">航路点类型</span>
+                <span class="system-info-value">{{ waypoint_type_count }} 种类型</span>
+            </div>
+            <div class="system-info-item">
+                <span class="system-info-label">航段数量</span>
+                <span class="system-info-value">{{ segment_count }} 条</span>
+            </div>
+            <div class="system-info-item">
+                <span class="system-info-label">航线总长</span>
+                <span class="system-info-value">{{ total_distance }} km</span>
+            </div>
+        </div>
+
+        <div class="chart-card mt-4">
+            <div class="chart-header">
+                <h4 class="chart-title"><i class="fas fa-database"></i> 数据表状态</h4>
+            </div>
+            <div class="chart-body">
+                <div id="dataStatusChart" style="height: 200px;"></div>
+            </div>
+        </div>
+
+        <div class="system-info mt-4">
+            <h5 class="mb-3"><i class="fas fa-user-cog"></i> 账户信息</h5>
+            <div class="system-info-item">
+                <span class="system-info-label">用户名</span>
+                <span class="system-info-value">{{ session.get('username') }}</span>
+            </div>
+            <div class="system-info-item">
+                <span class="system-info-label">用户角色</span>
+                <span class="system-info-value">
+                    {% if session.get('is_admin') %}
+                    <span class="badge badge-warning">管理员</span>
+                    {% else %}
+                    <span class="badge badge-info">普通用户</span>
+                    {% endif %}
+                </span>
+            </div>
+            <div class="system-info-item">
+                <span class="system-info-label">用户ID</span>
+                <span class="system-info-value">#{{ session.get('user_id') }}</span>
+            </div>
+            <div class="system-info-item">
+                <span class="system-info-label">状态</span>
+                <span class="system-info-value"><span class="status-badge status-active">正常</span></span>
+            </div>
+        </div>
+        <div class="system-info mt-4">
+            <div class="chart-header">
+                <h4 class="chart-title"><i class="fas fa-history"></i> 最近操作</h4>
+            </div>
+            <div class="chart-body">
+                <div class="activity-timeline">
+                    {% if recent_logs %}
+                        {% for log in recent_logs %}
+                        <div class="activity-item">
+                            <div class="activity-time">{{ log.ActionTime }}</div>
+                            <div class="activity-content">{{ log.Description or log.Action + ' - ' + log.TableName }}</div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted text-center">暂无操作记录</p>
+                    {% endif %}
+                </div>
+                </div>
+            </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var waypointTypeChart = echarts.init(document.getElementById('waypointTypeChart'));
+        var routeTypeChart = echarts.init(document.getElementById('routeTypeChart'));
+        var dataStatusChart = echarts.init(document.getElementById('dataStatusChart'));
+        var routeTypeDistributionChart = echarts.init(document.getElementById('routeTypeDistributionChart'));
+        var segmentDirectionChart = echarts.init(document.getElementById('segmentDirectionChart'));
+        var routeSegmentCountChart = echarts.init(document.getElementById('routeSegmentCountChart'));
+
+        var waypointTypeOption = {
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: { type: 'shadow' }
+            },
+            grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+            xAxis: {
+                type: 'category',
+                data: {{ waypoint_types | safe }},
+                axisLabel: { interval: 0, rotate: 30 }
+            },
+            yAxis: { type: 'value' },
+            series: [{
+                name: '航路点数量',
+                type: 'bar',
+                data: {{ waypoint_type_counts | safe }},
+                itemStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                        { offset: 0, color: '#0066cc' },
+                        { offset: 1, color: '#004d99' }
+                    ]),
+                    borderRadius: [4, 4, 0, 0]
+                }
+            }]
+        };
+        waypointTypeChart.setOption(waypointTypeOption);
+
+        var routeTypeOption = {
+            tooltip: { trigger: 'item' },
+            legend: { bottom: '5%', left: 'center' },
+            series: [{
+                name: '航线类型',
+                type: 'pie',
+                radius: ['40%', '70%'],
+                avoidLabelOverlap: false,
+                itemStyle: {
+                    borderRadius: 8,
+                    borderColor: '#fff',
+                    borderWidth: 2
+                },
+                label: { show: false },
+                emphasis: {
+                    label: { show: true, fontSize: 14, fontWeight: 'bold' }
+                },
+                data: {{ route_type_data | safe }}
+            }]
+        };
+        routeTypeChart.setOption(routeTypeOption);
+
+        var dataStatusOption = {
+            tooltip: { trigger: 'item' },
+            series: [{
+                name: '数据表',
+                type: 'pie',
+                radius: ['30%', '60%'],
+                roseType: 'radius',
+                data: [
+                    { value: {{ waypoint_count }}, name: '航路点' },
+                    { value: {{ route_count }}, name: '航线' },
+                    { value: {{ segment_count }}, name: '航段' },
+                    { value: {{ navaid_count }}, name: '导航台' }
+                ],
+                itemStyle: {
+                    borderRadius: 4,
+                    borderColor: '#fff',
+                    borderWidth: 1
+                }
+            }]
+        };
+        dataStatusChart.setOption(dataStatusOption);
+
+        window.addEventListener('resize', function() {
+            waypointTypeChart.resize();
+            routeTypeChart.resize();
+            dataStatusChart.resize();
+            routeTypeDistributionChart.resize();
+            segmentDirectionChart.resize();
+            routeSegmentCountChart.resize();
+        });
+
+        // 加载航路航段统计数据
+        function loadRouteStats() {
+            fetch('/api/route-stats')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // 更新统计卡片
+                        document.getElementById('totalRoutes').textContent = data.data.total_routes;
+                        document.getElementById('avgRouteDistance').textContent = data.data.avg_distance;
+                        
+                        // 初始化航路类型分布图表
+                        var routeTypeDistributionOption = {
+                            tooltip: { trigger: 'item' },
+                            legend: { bottom: '5%', left: 'center' },
+                            series: [{
+                                name: '航路类型',
+                                type: 'pie',
+                                radius: ['40%', '70%'],
+                                avoidLabelOverlap: false,
+                                itemStyle: {
+                                    borderRadius: 8,
+                                    borderColor: '#fff',
+                                    borderWidth: 2
+                                },
+                                label: { show: false },
+                                emphasis: {
+                                    label: { show: true, fontSize: 14, fontWeight: 'bold' }
+                                },
+                                data: data.data.route_type_distribution
+                            }]
+                        };
+                        routeTypeDistributionChart.setOption(routeTypeDistributionOption);
+                        
+                        // 初始化航段方向分布图表
+                        var segmentDirectionOption = {
+                            tooltip: { trigger: 'item' },
+                            legend: { bottom: '5%', left: 'center' },
+                            series: [{
+                                name: '航段方向',
+                                type: 'pie',
+                                radius: ['40%', '70%'],
+                                avoidLabelOverlap: false,
+                                itemStyle: {
+                                    borderRadius: 8,
+                                    borderColor: '#fff',
+                                    borderWidth: 2
+                                },
+                                label: { show: false },
+                                emphasis: {
+                                    label: { show: true, fontSize: 14, fontWeight: 'bold' }
+                                },
+                                data: data.data.segment_direction_data
+                            }]
+                        };
+                        segmentDirectionChart.setOption(segmentDirectionOption);
+                        
+                        // 初始化航路航段数量图表
+                        var routeSegmentCountOption = {
+                            tooltip: {
+                                trigger: 'axis',
+                                axisPointer: { type: 'shadow' }
+                            },
+                            grid: { left: '3%', right: '4%', bottom: '15%', containLabel: true },
+                            xAxis: {
+                                type: 'category',
+                                data: data.data.route_segment_data.map(item => item.route_name),
+                                axisLabel: { interval: 0, rotate: 45 }
+                            },
+                            yAxis: { type: 'value', name: '航段数量' },
+                            series: [{
+                                name: '航段数量',
+                                type: 'bar',
+                                data: data.data.route_segment_data.map(item => item.segment_count),
+                                itemStyle: {
+                                    color: function(params) {
+                                        var routeType = data.data.route_segment_data[params.dataIndex].route_type;
+                                        return routeType === '国内' ? '#0066cc' : '#ff6666';
+                                    },
+                                    borderRadius: [4, 4, 0, 0]
+                                }
+                            }]
+                        };
+                        routeSegmentCountChart.setOption(routeSegmentCountOption);
+                    } else {
+                        console.error('获取航路统计数据失败:', data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('获取航路统计数据失败:', error);
+                });
+        }
+
+        // 加载航段统计数据
+        function loadSegmentStats() {
+            fetch('/api/segment-stats')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // 更新统计卡片
+                        document.getElementById('totalSegments').textContent = data.data.total_segments;
+                    } else {
+                        console.error('获取航段统计数据失败:', data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('获取航段统计数据失败:', error);
+                });
+        }
+
+        // 初始化航路航段统计图表
+        function initRouteStatsCharts() {
+            loadRouteStats();
+            loadSegmentStats();
+        }
+
+        // 初始化航路航段统计
+        initRouteStatsCharts();
+    });
+</script>
+{% endblock %}

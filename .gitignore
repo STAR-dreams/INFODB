@@ -1,0 +1,29 @@
+# ====================================================
+# Information Database (INFODB)
+# This project config
+#   >>> git config user.name "infodb"
+#   >>> git config user.email "infodb@edu.cn"
+
+# This email address is virtual one and has no communication function.
+# ====================================================
+
+__pycache__/
+
+.idea/
+.vscode/
+explain.txt
+
+test/
+backups/
+db/
+edit_data/
+
+infodbVenv/
+
+# packing
+infoDB/
+dist/
+build/
+*.spec
+*.zip
+*.sqlite

@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>数字化航图平台-数据查看</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+        .header {
+            background-color: #3498db;
+            color: white;
+            padding: 15px 20px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .controls {
+            margin-bottom: 20px;
+            text-align: right;
+        }
+        .btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn:hover {
+            background-color: #2980b9;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .data-table th, .data-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .data-table th {
+            background-color: #f2f2f2;
+            font-weight: 600;
+        }
+        .data-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .data-table tr:hover {
+            background-color: #f5f5f5;
+        }
+        .footer {
+            text-align: center;
+            padding: 10px;
+            margin-top: 20px;
+            color: #666;
+            font-size: 12px;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        /* 模态框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 600px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .modal-header {
+            padding: 10px 0;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+        .modal-header h2 {
+            margin: 0;
+            font-size: 20px;
+            display: inline-block;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .modal-body {
+            padding: 10px 0;
+        }
+        .modal-footer {
+            padding: 20px 0 0;
+            border-top: 1px solid #ddd;
+            text-align: right;
+        }
+        /* 表单样式 */
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .form-group input[type="checkbox"] {
+            width: auto;
+        }
+        /* 操作按钮样式 */
+        .action-btn {
+            padding: 4px 8px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-right: 5px;
+        }
+        .edit-btn {
+            background-color: #28a745;
+            color: white;
+        }
+        .delete-btn {
+            background-color: #dc3545;
+            color: white;
+        }
+        .action-btn:hover {
+            opacity: 0.8;
+        }
+        /* 日志面板样式 */
+        .logs-panel {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .logs-panel-header {
+            background-color: #f8f9fa;
+            padding: 10px 15px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logs-panel-header h3 {
+            margin: 0;
+            font-size: 16px;
+            color: #333;
+        }
+        .logs-panel-body {
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 10px;
+            background-color: #f9f9f9;
+        }
+        .log-entry {
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+            font-size: 12px;
+            font-family: monospace;
+        }
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+        .log-timestamp {
+            color: #666;
+            margin-right: 10px;
+        }
+        .log-method {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .log-path {
+            color: #007bff;
+            margin-right: 10px;
+        }
+        .log-status {
+            margin-right: 10px;
+        }
+        .log-status-2xx {
+            color: #28a745;
+        }
+        .log-status-4xx {
+            color: #ffc107;
+        }
+        .log-status-5xx {
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>数字化航图平台-数据查看</h1>
+    </div>
+    
+    <div class="container">
+        <div class="controls">
+            <div style="float: left; margin-right: 20px;">
+                <input type="text" id="searchInput" placeholder="搜索..." style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                <button class="btn" onclick="searchData()">搜索</button>
+                <button class="btn" onclick="resetSearch()" style="margin-left: 5px;">重置</button>
+            </div>
+            {% if session.get('is_admin') %}
+            <button class="btn" onclick="openAddModal()">增加</button>
+            {% endif %}
+            <button class="btn" onclick="refreshData()" style="margin-left: 10px;">刷新数据</button>
+            <button class="btn" onclick="toggleLogsPanel()" style="margin-left: 10px;">显示/隐藏日志</button>
+            <a href="/dashboard" class="btn" style="margin-left: 10px;">返回主页</a>
+        </div>
+        
+        <div id="loading" class="loading">加载数据中...</div>
+        <table id="waypointTable" class="data-table" style="display: none;">
+            <thead>
+                <tr>
+                    <th>序号</th>
+                    <th>点名称</th>
+                    <th>纬度</th>
+                    <th>经度</th>
+                    <th>状态</th>
+                    <th>点类型</th>
+                    <th>类型名称</th>
+                    <th>频率</th>
+                    <th>创建时间</th>
+                    <th>维护时间</th>
+                    {% if session.get('is_admin') %}
+                    <th>操作</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody id="waypointTableBody">
+                <!-- 数据将通过JavaScript动态添加 -->
+            </tbody>
+        </table>
+        <table id="routeTable" class="data-table" style="display: none;">
+            <thead>
+                <tr>
+                    <th>序号</th>
+                    <th>航路名</th>
+                    <th>起点</th>
+                    <th>终点</th>
+                    <th>航路类型</th>
+                    <th>总距离</th>
+                    <th>最低飞行高（KM）</th>
+                    <th>航段数量</th>
+                    <th>创建时间</th>
+                    <th>维护时间</th>
+                    {% if session.get('is_admin') %}
+                    <th>操作</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody id="routeTableBody">
+                <!-- 数据将通过JavaScript动态添加 -->
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- 日志面板 -->
+    <div class="logs-panel" id="logsPanel" style="display: none;">
+        <div class="logs-panel-header">
+            <h3>后端服务器访问日志</h3>
+            <button class="btn" onclick="clearLogs()" style="padding: 4px 8px; font-size: 12px;">清空日志</button>
+        </div>
+        <div class="logs-panel-body" id="logsPanelBody">
+            <!-- 日志将通过JavaScript动态添加 -->
+        </div>
+    </div>
+    
+    <div class="footer">
+{#        © 2025-2026 数字化航图平台 | 航空情报数据模型及数据库技术#}
+        © 数字化航图平台 | 航空情报数据
+
+    </div>
+
+    <!-- 增加数据模态框 -->
+    <div id="addModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>增加数据</h2>
+                <span class="close" onclick="closeAddModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="addForm">
+                    <div id="addFormFields">
+                        <!-- 动态生成表单字段 -->
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeAddModal()">取消</button>
+                <button class="btn" onclick="submitAddForm()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 修改数据模态框 -->
+    <div id="editModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>修改数据</h2>
+                <span class="close" onclick="closeEditModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="editForm">
+                    <input type="hidden" id="editId">
+                    <div id="editFormFields">
+                        <!-- 动态生成表单字段 -->
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeEditModal()">取消</button>
+                <button class="btn" onclick="submitEditForm()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 删除确认对话框 -->
+    <div id="deleteModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>删除确认</h2>
+                <span class="close" onclick="closeDeleteModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>确定要删除这条记录吗？此操作不可恢复。</p>
+                <input type="hidden" id="deleteId">
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeDeleteModal()">取消</button>
+                <button class="btn" onclick="submitDeleteForm()" style="background-color: #dc3545;">删除</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 获取当前页面的表格类型
+        var currentTable = '{{ table }}';
+        console.log('当前表格类型:', currentTable);
+
+        // 页面加载完成后加载数据
+        window.onload = function() {
+            if (currentTable === 'Route') {
+                loadRouteData();
+            } else {
+                loadWaypointData();
+            }
+        };
+
+        // 加载航路点数据
+        function loadWaypointData() {
+            console.log('开始加载航路点数据');
+            fetch('/api/waypoints/details')
+                .then(response => {
+                    console.log('收到响应:', response);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('收到数据:', data);
+                    if (data.success) {
+                        displayWaypointData(data.waypoints);
+                    } else {
+                        document.getElementById('loading').textContent = '加载数据失败: ' + data.message;
+                        console.error('加载数据失败:', data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('加载数据失败:', error);
+                    document.getElementById('loading').textContent = '加载数据失败: ' + error.message;
+                });
+        }
+
+        // 加载航路数据
+        function loadRouteData() {
+            console.log('开始加载航路数据');
+            fetch('/api/routes/details')
+                .then(response => {
+                    console.log('收到响应:', response);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('收到数据:', data);
+                    if (data.success) {
+                        displayRouteData(data.routes);
+                    } else {
+                        document.getElementById('loading').textContent = '加载数据失败: ' + data.message;
+                        console.error('加载数据失败:', data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('加载数据失败:', error);
+                    document.getElementById('loading').textContent = '加载数据失败: ' + error.message;
+                });
+        }
+
+        // 显示航路点数据
+        function displayWaypointData(waypoints) {
+            var tableBody = document.getElementById('waypointTableBody');
+            tableBody.innerHTML = '';
+
+            waypoints.forEach(waypoint => {
+                var row = document.createElement('tr');
+                
+                // 添加序号
+                var idCell = document.createElement('td');
+                idCell.textContent = waypoint['序号'];
+                row.appendChild(idCell);
+                
+                // 添加点名称
+                var nameCell = document.createElement('td');
+                nameCell.textContent = waypoint['点名称'];
+                row.appendChild(nameCell);
+                
+                // 添加纬度
+                var latCell = document.createElement('td');
+                latCell.textContent = waypoint['纬度'];
+                row.appendChild(latCell);
+                
+                // 添加经度
+                var lngCell = document.createElement('td');
+                lngCell.textContent = waypoint['经度'];
+                row.appendChild(lngCell);
+                
+                // 添加状态
+                var statusCell = document.createElement('td');
+                statusCell.textContent = waypoint['状态'];
+                row.appendChild(statusCell);
+                
+                // 添加点类型
+                var typeCodeCell = document.createElement('td');
+                typeCodeCell.textContent = waypoint['点类型'];
+                row.appendChild(typeCodeCell);
+                
+                // 添加类型名称
+                var typeNameCell = document.createElement('td');
+                typeNameCell.textContent = waypoint['类型名称'];
+                row.appendChild(typeNameCell);
+                
+                // 添加频率
+                var freqCell = document.createElement('td');
+                freqCell.textContent = waypoint['频率'];
+                row.appendChild(freqCell);
+                
+                // 添加创建时间
+                var createdAtCell = document.createElement('td');
+                createdAtCell.textContent = waypoint['创建时间'];
+                row.appendChild(createdAtCell);
+                
+                // 添加维护时间
+                var updatedAtCell = document.createElement('td');
+                updatedAtCell.textContent = waypoint['维护时间'];
+                row.appendChild(updatedAtCell);
+                
+                // 添加操作列
+                {% if session.get('is_admin') %}
+                var actionCell = document.createElement('td');
+                var editBtn = document.createElement('button');
+                editBtn.className = 'action-btn edit-btn';
+                editBtn.textContent = '编辑';
+                editBtn.onclick = function() {
+                    openEditModal(waypoint);
+                };
+                var deleteBtn = document.createElement('button');
+                deleteBtn.className = 'action-btn delete-btn';
+                deleteBtn.textContent = '删除';
+                deleteBtn.onclick = function() {
+                    openDeleteModal(waypoint);
+                };
+                actionCell.appendChild(editBtn);
+                actionCell.appendChild(deleteBtn);
+                row.appendChild(actionCell);
+                {% endif %}
+                
+                tableBody.appendChild(row);
+            });
+
+            // 隐藏加载提示，显示表格
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('waypointTable').style.display = 'table';
+            document.getElementById('routeTable').style.display = 'none';
+        }
+
+        // 显示航路数据
+        function displayRouteData(routes) {
+            var tableBody = document.getElementById('routeTableBody');
+            tableBody.innerHTML = '';
+
+            routes.forEach(route => {
+                var row = document.createElement('tr');
+                
+                // 添加序号
+                var idCell = document.createElement('td');
+                idCell.textContent = route['序号'];
+                row.appendChild(idCell);
+                
+                // 添加航路名
+                var nameCell = document.createElement('td');
+                nameCell.textContent = route['航路名'];
+                row.appendChild(nameCell);
+                
+                // 添加起点
+                var startCell = document.createElement('td');
+                startCell.textContent = route['起点'];
+                row.appendChild(startCell);
+                
+                // 添加终点
+                var endCell = document.createElement('td');
+                endCell.textContent = route['终点'];
+                row.appendChild(endCell);
+                
+                // 添加航路类型
+                var typeCell = document.createElement('td');
+                typeCell.textContent = route['航路类型'];
+                row.appendChild(typeCell);
+                
+                // 添加总距离
+                var distanceCell = document.createElement('td');
+                distanceCell.textContent = route['总距离'];
+                row.appendChild(distanceCell);
+                
+                // 添加最低飞行高
+                var altitudeCell = document.createElement('td');
+                altitudeCell.textContent = route['最低飞行高（KM）'];
+                row.appendChild(altitudeCell);
+                
+                // 添加航段数量
+                var segmentCell = document.createElement('td');
+                segmentCell.textContent = route['航段数量'];
+                row.appendChild(segmentCell);
+                
+                // 添加创建时间
+                var createdAtCell = document.createElement('td');
+                createdAtCell.textContent = route['创建时间'];
+                row.appendChild(createdAtCell);
+                
+                // 添加维护时间
+                var updatedAtCell = document.createElement('td');
+                updatedAtCell.textContent = route['维护时间'];
+                row.appendChild(updatedAtCell);
+                
+                // 添加操作列
+                {% if session.get('is_admin') %}
+                var actionCell = document.createElement('td');
+                var editBtn = document.createElement('button');
+                editBtn.className = 'action-btn edit-btn';
+                editBtn.textContent = '编辑';
+                editBtn.onclick = function() {
+                    openEditModal(route);
+                };
+                var deleteBtn = document.createElement('button');
+                deleteBtn.className = 'action-btn delete-btn';
+                deleteBtn.textContent = '删除';
+                deleteBtn.onclick = function() {
+                    openDeleteModal(route);
+                };
+                actionCell.appendChild(editBtn);
+                actionCell.appendChild(deleteBtn);
+                row.appendChild(actionCell);
+                {% endif %}
+                
+                tableBody.appendChild(row);
+            });
+
+            // 隐藏加载提示，显示表格
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('routeTable').style.display = 'table';
+            document.getElementById('waypointTable').style.display = 'none';
+        }
+
+        // 刷新数据
+        function refreshData() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('waypointTable').style.display = 'none';
+            document.getElementById('routeTable').style.display = 'none';
+            
+            if (currentTable === 'Route') {
+                loadRouteData();
+            } else {
+                loadWaypointData();
+            }
+        }
+
+        // 搜索数据
+        function searchData() {
+            var keyword = document.getElementById('searchInput').value.trim();
+            if (!keyword) {
+                refreshData();
+                return;
+            }
+            
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('waypointTable').style.display = 'none';
+            document.getElementById('routeTable').style.display = 'none';
+            
+            // 调用后端搜索API
+            var apiUrl = currentTable === 'Route' ? `/api/routes/search?keyword=${encodeURIComponent(keyword)}` : `/api/waypoints/search?keyword=${encodeURIComponent(keyword)}`;
+            
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        if (currentTable === 'Route') {
+                            displayRouteData(data.routes);
+                        } else {
+                            displayWaypointData(data.waypoints);
+                        }
+                    } else {
+                        document.getElementById('loading').textContent = '搜索失败: ' + data.message;
+                        console.error('搜索失败:', data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('搜索数据失败:', error);
+                    document.getElementById('loading').textContent = '搜索数据失败: ' + error.message;
+                });
+        }
+
+        // 重置搜索
+        function resetSearch() {
+            document.getElementById('searchInput').value = '';
+            refreshData();
+        }
+
+        // 打开增加模态框
+        function openAddModal() {
+            document.getElementById('addModal').style.display = 'block';
+            
+            // 动态生成表单字段
+            var formFields = document.getElementById('addFormFields');
+            formFields.innerHTML = '';
+            
+            if (currentTable === 'Route') {
+                // 航路表单字段
+                formFields.innerHTML = `
+                    <div class="form-group">
+                        <label for="addRouteName">航路名</label>
+                        <input type="text" id="addRouteName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="addStartPoint">起点</label>
+                        <input type="text" id="addStartPoint" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="addEndPoint">终点</label>
+                        <input type="text" id="addEndPoint" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="addRouteType">航路类型</label>
+                        <select id="addRouteType" required>
+                            <option value="DOMESTIC">国内</option>
+                            <option value="FOREIGN">国外</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="addTotalDistance">总距离</label>
+                        <input type="number" id="addTotalDistance" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="addMinAltitude">最低飞行高（KM）</label>
+                        <input type="number" id="addMinAltitude" step="0.1" required>
+                    </div>
+                `;
+            } else {
+                // 航路点表单字段
+                formFields.innerHTML = `
+                    <div class="form-group">
+                        <label for="addWaypointName">点名称</label>
+                        <input type="text" id="addWaypointName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="addLatitude">纬度</label>
+                        <input type="number" id="addLatitude" step="0.0001" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="addLongitude">经度</label>
+                        <input type="number" id="addLongitude" step="0.0001" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="addStatus">状态</label>
+                        <select id="addStatus" required>
+                            <option value="1">有效</option>
+                            <option value="0">停用</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="addTypeCode">点类型</label>
+                        <input type="text" id="addTypeCode">
+                    </div>
+                    <div class="form-group">
+                        <label for="addTypeName">类型名称</label>
+                        <input type="text" id="addTypeName">
+                    </div>
+                    <div class="form-group">
+                        <label for="addFrequency">频率</label>
+                        <input type="text" id="addFrequency">
+                    </div>
+                `;
+            }
+        }
+
+        // 关闭增加模态框
+        function closeAddModal() {
+            document.getElementById('addModal').style.display = 'none';
+        }
+
+        // 提交增加表单
+        function submitAddForm() {
+            var data = {};
+            
+            if (currentTable === 'Route') {
+                data = {
+                    RouteName: document.getElementById('addRouteName').value,
+                    StartPoint: document.getElementById('addStartPoint').value,
+                    EndPoint: document.getElementById('addEndPoint').value,
+                    RouteType: document.getElementById('addRouteType').value,
+                    TotalDistanceKM: parseFloat(document.getElementById('addTotalDistance').value),
+                    MinAltitude: parseFloat(document.getElementById('addMinAltitude').value)
+                };
+            } else {
+                data = {
+                    Name: document.getElementById('addWaypointName').value,
+                    Latitude: parseFloat(document.getElementById('addLatitude').value),
+                    Longitude: parseFloat(document.getElementById('addLongitude').value),
+                    IsActive: parseInt(document.getElementById('addStatus').value),
+                    TypeCode: document.getElementById('addTypeCode').value,
+                    TypeName: document.getElementById('addTypeName').value,
+                    Frequency: document.getElementById('addFrequency').value
+                };
+            }
+            
+            // 提交到后端API
+            var apiUrl = currentTable === 'Route' ? '/api/routes/add' : '/api/waypoints/add';
+            
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert(result.message);
+                    closeAddModal();
+                    refreshData();
+                } else {
+                    alert('添加失败: ' + result.message);
+                }
+            })
+            .catch(error => {
+                console.error('添加数据失败:', error);
+                alert('添加数据失败，请重试');
+            });
+        }
+
+        // 打开修改模态框
+        function openEditModal(item) {
+            document.getElementById('editModal').style.display = 'block';
+            document.getElementById('editId').value = item['WaypointID'] || item['RouteID'] || item['序号'];
+            
+            // 动态生成表单字段
+            var formFields = document.getElementById('editFormFields');
+            formFields.innerHTML = '';
+            
+            if (currentTable === 'Route') {
+                // 航路表单字段
+                formFields.innerHTML = `
+                    <div class="form-group">
+                        <label for="editRouteName">航路名</label>
+                        <input type="text" id="editRouteName" value="${item['航路名']}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editStartPoint">起点</label>
+                        <input type="text" id="editStartPoint" value="${item['起点']}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editEndPoint">终点</label>
+                        <input type="text" id="editEndPoint" value="${item['终点']}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editRouteType">航路类型</label>
+                        <select id="editRouteType" required>
+                            <option value="DOMESTIC" ${item['航路类型'] === '国内' ? 'selected' : ''}>国内</option>
+                            <option value="FOREIGN" ${item['航路类型'] === '国外' ? 'selected' : ''}>国外</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="editTotalDistance">总距离</label>
+                        <input type="number" id="editTotalDistance" step="0.1" value="${item['总距离']}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editMinAltitude">最低飞行高（KM）</label>
+                        <input type="number" id="editMinAltitude" step="0.1" value="${item['最低飞行高（KM）']}" required>
+                    </div>
+                `;
+            } else {
+                // 航路点表单字段
+                formFields.innerHTML = `
+                    <div class="form-group">
+                        <label for="editWaypointName">点名称</label>
+                        <input type="text" id="editWaypointName" value="${item['点名称']}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editLatitude">纬度</label>
+                        <input type="number" id="editLatitude" step="0.0001" value="${item['纬度']}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editLongitude">经度</label>
+                        <input type="number" id="editLongitude" step="0.0001" value="${item['经度']}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editStatus">状态</label>
+                        <select id="editStatus" required>
+                            <option value="1" ${item['状态'] === '有效' ? 'selected' : ''}>有效</option>
+                            <option value="0" ${item['状态'] === '停用' ? 'selected' : ''}>停用</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="editTypeCode">点类型</label>
+                        <input type="text" id="editTypeCode" value="${item['点类型']}">
+                    </div>
+                    <div class="form-group">
+                        <label for="editTypeName">类型名称</label>
+                        <input type="text" id="editTypeName" value="${item['类型名称']}">
+                    </div>
+                    <div class="form-group">
+                        <label for="editFrequency">频率</label>
+                        <input type="text" id="editFrequency" value="${item['频率']}">
+                    </div>
+                `;
+            }
+        }
+
+        // 关闭修改模态框
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+
+        // 提交修改表单
+        function submitEditForm() {
+            var id = document.getElementById('editId').value;
+            var data = {};
+            
+            if (currentTable === 'Route') {
+                data = {
+                    RouteName: document.getElementById('editRouteName').value,
+                    RouteType: document.getElementById('editRouteType').value,
+                    TotalDistanceKM: document.getElementById('editTotalDistance').value
+                };
+            } else {
+                data = {
+                    Name: document.getElementById('editWaypointName').value,
+                    Latitude: document.getElementById('editLatitude').value,
+                    Longitude: document.getElementById('editLongitude').value,
+                    IsActive: document.getElementById('editStatus').value,
+                    TypeCode: document.getElementById('editTypeCode').value,
+                    TypeName: document.getElementById('editTypeName').value,
+                    Frequency: document.getElementById('editFrequency').value
+                };
+            }
+            
+            // 提交到后端API
+            var apiUrl = currentTable === 'Route' ? `/api/routes/edit/${id}` : `/api/waypoints/edit/${id}`;
+            
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert(result.message);
+                    closeEditModal();
+                    refreshData();
+                } else {
+                    alert('修改失败: ' + result.message);
+                }
+            })
+            .catch(error => {
+                console.error('修改数据失败:', error);
+                alert('修改数据失败，请重试');
+            });
+        }
+
+        // 打开删除模态框
+        function openDeleteModal(item) {
+            document.getElementById('deleteModal').style.display = 'block';
+            document.getElementById('deleteId').value = item['WaypointID'] || item['RouteID'] || item['序号'];
+        }
+
+        // 关闭删除模态框
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').style.display = 'none';
+        }
+
+        // 提交删除表单
+        function submitDeleteForm() {
+            var id = document.getElementById('deleteId').value;
+            
+            // 提交到后端API
+            var apiUrl = currentTable === 'Route' ? `/api/routes/delete/${id}` : `/api/waypoints/delete/${id}`;
+            
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert(result.message);
+                    closeDeleteModal();
+                    refreshData();
+                } else {
+                    alert('删除失败: ' + result.message);
+                }
+            })
+            .catch(error => {
+                console.error('删除数据失败:', error);
+                alert('删除数据失败，请重试');
+            });
+        }
+
+        // 点击模态框外部关闭
+        window.onclick = function(event) {
+            var modals = document.getElementsByClassName('modal');
+            for (var i = 0; i < modals.length; i++) {
+                if (event.target == modals[i]) {
+                    modals[i].style.display = 'none';
+                }
+            }
+        }
+        
+        // 显示/隐藏日志面板
+        function toggleLogsPanel() {
+            var logsPanel = document.getElementById('logsPanel');
+            if (logsPanel.style.display === 'none') {
+                logsPanel.style.display = 'block';
+                loadLogs();
+            } else {
+                logsPanel.style.display = 'none';
+            }
+        }
+        
+        // 加载日志数据
+        function loadLogs() {
+            fetch('/api/access-logs')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayLogs(data.logs);
+                    } else {
+                        console.error('加载日志失败:', data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('加载日志失败:', error);
+                });
+        }
+        
+        // 显示日志
+        function displayLogs(logs) {
+            var logsPanelBody = document.getElementById('logsPanelBody');
+            logsPanelBody.innerHTML = '';
+            
+            logs.forEach(log => {
+                var logEntry = document.createElement('div');
+                logEntry.className = 'log-entry';
+                
+                var statusClass = 'log-status';
+                if (log.status >= 200 && log.status < 300) {
+                    statusClass += ' log-status-2xx';
+                } else if (log.status >= 400 && log.status < 500) {
+                    statusClass += ' log-status-4xx';
+                } else if (log.status >= 500) {
+                    statusClass += ' log-status-5xx';
+                }
+                
+                logEntry.innerHTML = `
+                    <span class="log-timestamp">${log.timestamp}</span>
+                    <span class="log-method">${log.method}</span>
+                    <span class="log-path">${log.path}</span>
+                    <span class="${statusClass}">${log.status}</span>
+                    <span>${log.message}</span>
+                `;
+                
+                logsPanelBody.appendChild(logEntry);
+            });
+            
+            // 滚动到底部
+            logsPanelBody.scrollTop = logsPanelBody.scrollHeight;
+        }
+        
+        // 清空日志面板
+        function clearLogs() {
+            document.getElementById('logsPanelBody').innerHTML = '';
+        }
+        
+        // 定期自动刷新日志
+        setInterval(function() {
+            var logsPanel = document.getElementById('logsPanel');
+            if (logsPanel.style.display !== 'none') {
+                loadLogs();
+            }
+        }, 2000); // 每2秒刷新一次
+    </script>
+</body>
+</html>

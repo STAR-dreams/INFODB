@@ -1,0 +1,464 @@
+{% extends "base.html" %}
+
+{% block title %}{% if action == 'add' %}添加数据{% elif action == 'edit' %}编辑数据{% else %}查看详情{% endif %} - {{ table_name }} - 数字化航图平台{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-content">
+        <div class="page-title-wrapper">
+            <div class="page-icon {% if action == 'add' %}success{% elif action == 'edit' %}primary{% else %}info{% endif %}">
+                {% if action == 'add' %}
+                <i class="fas fa-plus"></i>
+                {% elif action == 'edit' %}
+                <i class="fas fa-edit"></i>
+                {% else %}
+                <i class="fas fa-eye"></i>
+                {% endif %}
+            </div>
+            <div class="page-title-info">
+                <h1>{% if action == 'add' %}添加数据{% elif action == 'edit' %}编辑数据{% else %}查看详情{% endif %} - {{ table_name }}</h1>
+                <p class="page-subtitle">{{ table_description }}</p>
+            </div>
+        </div>
+        <div class="page-actions">
+            <a href="{{ url_for('data_view', table=table_name) }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left mr-2"></i>返回列表
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-list mr-2"></i>
+            {% if action == 'add' %}添加新记录{% elif action == 'edit' %}编辑记录{% else %}记录详情{% endif %}
+        </h5>
+    </div>
+    <div class="card-body">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        <i class="fas fa-info-circle mr-2"></i>{{ message }}
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('data_manage', table=table_name, action=action, id=id if id else 0) }}"
+              id="dataForm" class="data-form {% if action == 'view' %}view-mode{% endif %}">
+            {% for field in fields %}
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label class="form-label" for="{{ field.name }}">
+                        {{ field.label }}
+                        {% if field.required %}
+                        <span class="text-danger">*</span>
+                        {% endif %}
+                    </label>
+
+                    {% if action == 'view' %}
+                    <div class="form-control-static">
+                        {% if field.type == 'boolean' %}
+                        <span class="badge badge-{% if record[field.name] %}success{% else %}secondary{% endif %}">
+                            {% if record[field.name] %}是{% else %}否{% endif %}
+                        </span>
+                        {% elif field.type == 'foreign_key' %}
+                        {% if record[field.name] %}
+                        <a href="{{ url_for('data_view', table=field.ref_table, filter=field.ref_column + '=' + record[field.name]|string) }}"
+                           class="text-primary">{{ record[field.name] }}</a>
+                        {% else %}
+                        -
+                        {% endif %}
+                        {% elif field.type == 'date' %}
+                        {{ record[field.name] if record[field.name] else '-' }}
+                        {% elif field.type == 'text' or field.type == 'string' %}
+                        {{ record[field.name] if record[field.name] is not none else '-' }}
+                        {% else %}
+                        {{ record[field.name] if record[field.name] is not none else '-' }}
+                        {% endif %}
+                    </div>
+                    {% elif field.type == 'boolean' %}
+                    <div class="custom-control custom-switch">
+                        <input type="checkbox" class="custom-control-input"
+                               id="{{ field.name }}" name="{{ field.name }}"
+                               {% if record[field.name] %}checked{% endif %}
+                               {% if field.disabled %}disabled{% endif %}>
+                        <label class="custom-control-label" for="{{ field.name }}">
+                            {{ field.help_text if field.help_text else '' }}
+                        </label>
+                    </div>
+                    {% elif field.type == 'select' %}
+                    <select class="form-control" id="{{ field.name }}" name="{{ field.name }}"
+                            {% if field.required %}required{% endif %}
+                            {% if field.disabled %}disabled{% endif %}>
+                        <option value="">请选择</option>
+                        {% for option in field.options %}
+                        <option value="{{ option.value }}"
+                                {% if record[field.name] == option.value or field.default == option.value %}selected{% endif %}>
+                            {{ option.label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% elif field.type == 'foreign_key' %}
+                    <select class="form-control" id="{{ field.name }}" name="{{ field.name }}"
+                            {% if field.required %}required{% endif %}
+                            {% if field.disabled %}disabled{% endif %}>
+                        <option value="">请选择</option>
+                        {% for option in field.options %}
+                        <option value="{{ option.value }}"
+                                {% if record[field.name] == option.value or field.default == option.value %}selected{% endif %}>
+                            {{ option.label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% elif field.type == 'textarea' %}
+                    <textarea class="form-control" id="{{ field.name }}" name="{{ field.name }}"
+                              rows="4" placeholder="{{ field.placeholder if field.placeholder else '' }}"
+                              {% if field.required %}required{% endif %}
+                              {% if field.maxlength %}maxlength="{{ field.maxlength }}"{% endif %}
+                              {% if field.disabled %}disabled{% endif %}>{{ record[field.name] if record[field.name] is not none else '' }}</textarea>
+                    {% elif field.type == 'date' %}
+                    <input type="date" class="form-control" id="{{ field.name }}" name="{{ field.name }}"
+                           value="{{ record[field.name] if record[field.name] else '' }}"
+                           {% if field.required %}required{% endif %}
+                           {% if field.disabled %}disabled{% endif %}>
+                    {% elif field.type == 'datetime' %}
+                    <input type="datetime-local" class="form-control" id="{{ field.name }}" name="{{ field.name }}"
+                           value="{{ record[field.name] if record[field.name] else '' }}"
+                           step="1"
+                           {% if field.required %}required{% endif %}
+                           {% if field.disabled %}disabled{% endif %}>
+                    {% elif field.type == 'number' or field.type == 'integer' %}
+                    <input type="number" class="form-control" id="{{ field.name }}" name="{{ field.name }}"
+                           value="{{ record[field.name] if record[field.name] is not none else '' }}"
+                           {% if field.min is defined %}min="{{ field.min }}"{% endif %}
+                           {% if field.max is defined %}max="{{ field.max }}"{% endif %}
+                           {% if field.step %}step="{{ field.step }}"{% endif %}
+                           {% if field.required %}required{% endif %}
+                           {% if field.disabled %}disabled{% endif %}>
+                    {% elif field.type == 'float' %}
+                    <input type="number" class="form-control" id="{{ field.name }}" name="{{ field.name }}"
+                           value="{{ record[field.name] if record[field.name] is not none else '' }}"
+                           {% if field.min is defined %}min="{{ field.min }}"{% endif %}
+                           {% if field.max is defined %}max="{{ field.max }}"{% endif %}
+                           step="any"
+                           {% if field.required %}required{% endif %}
+                           {% if field.disabled %}disabled{% endif %}>
+                    {% else %}
+                    <input type="text" class="form-control" id="{{ field.name }}" name="{{ field.name }}"
+                           value="{{ record[field.name] if record[field.name] is not none else '' }}"
+                           placeholder="{{ field.placeholder if field.placeholder else '' }}"
+                           {% if field.maxlength %}maxlength="{{ field.maxlength }}"{% endif %}
+                           {% if field.required %}required{% endif %}
+                           {% if field.disabled %}disabled{% endif %}
+                           {% if field.pattern %}pattern="{{ field.pattern }}"{% endif %}>
+                    {% endif %}
+
+                    {% if field.help_text and action != 'view' %}
+                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+
+            <!-- 变更描述字段 -->
+            {% if action != 'view' %}
+            <div class="form-row">
+                <div class="form-group col-md-12">
+                    <label class="form-label" for="description">
+                        修改描述
+                        <span class="text-danger">*</span>
+                    </label>
+                    <textarea class="form-control" id="description" name="description"
+                              rows="3" placeholder="请输入修改理由或说明"
+                              required maxlength="500"></textarea>
+                    <small class="form-text text-muted">请简要说明本次修改的原因，以便于后续追溯</small>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if action != 'view' %}
+            <div class="form-actions">
+                <div class="form-actions-content">
+                    <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                        <i class="fas fa-save mr-2"></i>
+                        {% if action == 'add' %}保存数据{% else %}更新数据{% endif %}
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-lg" onclick="resetForm()">
+                        <i class="fas fa-redo mr-2"></i>重置
+                    </button>
+                    <a href="{{ url_for('data_view', table=table_name) }}" class="btn btn-outline-secondary btn-lg">
+                        <i class="fas fa-times mr-2"></i>取消
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+{% if action == 'edit' and id %}
+<div class="card mt-4">
+    <div class="card-header bg-danger text-white">
+        <h5 class="mb-0">
+            <i class="fas fa-exclamation-triangle mr-2"></i>危险操作区域
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h6 class="mb-1">删除此记录</h6>
+                <p class="text-muted mb-0">此操作将永久删除此记录，且无法恢复。请确认后再进行操作。</p>
+            </div>
+            <div class="col-md-4 text-md-right">
+                <button type="button" class="btn btn-danger" onclick="confirmDelete()">
+                    <i class="fas fa-trash mr-2"></i>删除记录
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-sm" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger">确认删除</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p><i class="fas fa-exclamation-triangle text-danger mr-2"></i>确定要删除这条记录吗？此操作不可恢复。</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
+                <form method="POST" action="{{ url_for('data_manage', table=table_name, action='delete', id=id if id else 0) }}" style="display: inline;" id="deleteForm">
+                    <input type="hidden" name="description" id="deleteDescription" required>
+                    <button type="submit" class="btn btn-danger" onclick="return showDeleteDescriptionDialog()">
+                        <i class="fas fa-trash mr-2"></i>确认删除
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 删除描述对话框 -->
+<div class="modal fade" id="deleteDescriptionModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">删除说明</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="deleteDescriptionInput" class="form-label">请输入删除原因</label>
+                    <textarea class="form-control" id="deleteDescriptionInput" rows="3" placeholder="请简要说明删除此记录的原因" required maxlength="500"></textarea>
+                    <small class="form-text text-muted">此说明将被记录到变更日志中</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteWithDescription">确认删除</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function() {
+    initializeFormValidation();
+    initializeFormActions();
+    autoHideAlerts();
+});
+function initializeFormValidation() {
+    $('#dataForm').on('submit', function(e) {
+        e.preventDefault(); // 阻止默认提交
+        
+        var isValid = true;
+        var firstInvalid = null;
+
+        $(this).find('[required]').each(function() {
+            var value = $(this).val();
+            if (!value || (typeof value === 'string' && !value.trim())) {
+                isValid = false;
+                $(this).addClass('is-invalid');
+                if (!firstInvalid) {
+                    firstInvalid = $(this);
+                }
+            } else {
+                $(this).removeClass('is-invalid');
+            }
+        });
+
+        $(this).find('input[pattern]').each(function() {
+            var pattern = new RegExp($(this).attr('pattern'));
+            var value = $(this).val();
+            if (value && !pattern.test(value)) {
+                isValid = false;
+                $(this).addClass('is-invalid');
+                if (!firstInvalid) {
+                    firstInvalid = $(this);
+                }
+            }
+        });
+
+        if (!isValid) {
+            if (firstInvalid) {
+                $('html, body').animate({
+                    scrollTop: firstInvalid.offset().top - 100
+                }, 300);
+                firstInvalid.focus();
+            }
+        } else {
+            // 使用AJAX提交表单
+            var submitBtn = $('#submitBtn');
+            submitBtn.html('<i class="fas fa-spinner fa-spin mr-2"></i>正在保存...').prop('disabled', true);
+            
+            var formData = $(this).serialize();
+            var formAction = $(this).attr('action');
+            
+            console.log('提交表单到:', formAction);
+            console.log('提交数据:', formData);
+            
+            $.ajax({
+                url: formAction,
+                type: 'POST',
+                data: formData,
+                dataType: 'json',
+                success: function(response) {
+                    console.log('服务器响应:', response);
+                    if (response.success) {
+                        // 显示成功消息
+                        showAlert('success', response.message);
+                        // 跳转到数据列表页面
+                        setTimeout(function() {
+                            window.location.href = '{{ url_for('data_view', table=table_name) }}';
+                        }, 1500);
+                    } else {
+                        // 显示错误消息
+                        showAlert('danger', response.message);
+                        submitBtn.html('<i class="fas fa-save mr-2"></i>{% if action == 'add' %}保存数据{% else %}更新数据{% endif %}').prop('disabled', false);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('AJAX错误:', status, error);
+                    console.error('响应状态:', xhr.status);
+                    console.error('响应文本:', xhr.responseText);
+                    
+                    // 尝试解析响应文本，可能是HTML错误页面
+                    try {
+                        var errorMessage = '网络错误，请重试';
+                        if (xhr.responseText) {
+                            // 检查是否是HTML页面
+                            if (xhr.responseText.startsWith('<!DOCTYPE html>')) {
+                                errorMessage = '服务器错误，请联系管理员';
+                            } else {
+                                // 尝试解析JSON
+                                var errorObj = JSON.parse(xhr.responseText);
+                                errorMessage = errorObj.message || '服务器错误';
+                            }
+                        }
+                        showAlert('danger', errorMessage);
+                    } catch (e) {
+                        showAlert('danger', '网络错误，请重试');
+                    }
+                    submitBtn.html('<i class="fas fa-save mr-2"></i>{% if action == 'add' %}保存数据{% else %}更新数据{% endif %}').prop('disabled', false);
+                }
+            });
+        }
+    });
+
+    $('input, select, textarea').on('input change', function() {
+        $(this).removeClass('is-invalid');
+        $(this).next('.invalid-feedback').remove();
+    });
+}
+
+function showAlert(type, message) {
+    // 移除现有的alert
+    $('.alert').remove();
+    
+    // 创建新的alert
+    var alertHtml = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            <i class="fas fa-info-circle mr-2"></i>${message}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    `;
+    
+    // 将alert添加到表单上方
+    $('#dataForm').before(alertHtml);
+    
+    // 自动隐藏
+    setTimeout(function() {
+        $('.alert').alert('close');
+    }, 5000);
+}
+
+function initializeFormActions() {
+    $('#dataForm').on('reset', function(e) {
+        setTimeout(function() {
+            $('input, select, textarea').removeClass('is-invalid');
+            $('.invalid-feedback').remove();
+        }, 0);
+    });
+}
+
+function resetForm() {
+    $('#dataForm')[0].reset();
+    $('input, select, textarea').removeClass('is-invalid');
+    $('.invalid-feedback').remove();
+    $('html, body').animate({ scrollTop: 0 }, 300);
+}
+
+function confirmDelete() {
+    $('#deleteModal').modal('show');
+}
+
+function showDeleteDescriptionDialog() {
+    $('#deleteDescriptionModal').modal('show');
+    return false;
+}
+
+$(document).ready(function() {
+    // 确认删除并提交描述
+    $('#confirmDeleteWithDescription').click(function() {
+        var description = $('#deleteDescriptionInput').val().trim();
+        if (!description) {
+            alert('请输入删除原因');
+            return;
+        }
+        $('#deleteDescription').val(description);
+        $('#deleteDescriptionModal').modal('hide');
+        setTimeout(function() {
+            $('#deleteForm').submit();
+        }, 500);
+    });
+});
+
+function autoHideAlerts() {
+    $('.alert').each(function() {
+        var $alert = $(this);
+        if ($alert.hasClass('alert-success') || $alert.hasClass('alert-info')) {
+            setTimeout(function() {
+                $alert.alert('close');
+            }, 5000);
+        }
+    });
+}
+</script>
+{% endblock %}

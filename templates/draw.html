@@ -1,0 +1,670 @@
+{% extends "base.html" %}
+
+{% block title %}数字化显示 - 数字化航图平台{% endblock %}
+
+{% block content %}
+<!-- <div class="page-header">
+    <div class="page-header-content">
+        <h1>
+            <i class="fas fa-globe-asia"></i>
+            可视化显示
+        </h1>
+        <p>在地图上可视化显示航路点数据</p>
+    </div>
+</div> -->
+
+<div class="card">
+    <div class="card-header">
+        <div class="card-header-content">
+            <h5>地图显示</h5>
+            <div class="card-actions">
+                <button class="btn btn-sm btn-outline-primary" onclick="refreshMap()">
+                    <i class="fas fa-sync"></i> 刷新数据
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body" style="height: 700px; padding: 0;">
+        <div class="map-container">
+            <div id="map" style="height: 100%; width: 100%;"></div>
+            <div class="map-sidebar">
+                <div class="layer-control">
+                    <h6>图层控制</h6>
+                    <div class="layer-item">
+                        <input type="checkbox" id="waypointLayer" checked onchange="toggleWaypointLayer()">
+                        <label for="waypointLayer">航路点</label>
+                    </div>
+                    <div class="layer-item">
+                        <input type="checkbox" id="navaidLayer" checked onchange="toggleNavaidLayer()">
+                        <label for="navaidLayer">导航台</label>
+                    </div>
+                    <!--机场图层控制按钮-->
+                    <div class="layer-item">
+                        <input type="checkbox" id="airportLayer" checked onchange="toggleAirportLayer()">
+                        <label for="airportLayer">机场</label>
+                    </div>
+                    <div class="layer-item">
+                        <input type="checkbox" id="segmentLayer" checked onchange="toggleSegmentLayer()">
+                        <label for="segmentLayer">航路网</label>
+                    </div>
+                    <div class="layer-item">
+                        <input type="checkbox" id="routeLayer" checked onchange="toggleRouteLayer()">
+                        <label for="routeLayer">航路</label>
+                    </div>
+                    <!-- 预留其他图层控制按钮的空间 -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.map-container {
+    position: relative;
+    height: 100%;
+}
+
+.map-sidebar {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.500);
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 15px;
+    min-width: 150px;
+}
+
+.layer-control h6 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-weight: 600;
+    color: #333;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 8px;
+}
+
+.layer-item {
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+}
+
+.layer-item input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+.layer-item label {
+    margin: 0;
+    cursor: pointer;
+    font-size: 14px;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+
+<script>
+    var map;
+    var waypointMarkers = [];
+    var navaidMarkers = [];
+    var segmentLines = [];
+    var routeLines = [];
+    var waypointLayer = L.markerClusterGroup({
+        maxClusterRadius: 50,
+        showCoverageOnHover: false,
+        zoomToBoundsOnClick: true
+    });
+    var navaidLayer = L.markerClusterGroup({
+        maxClusterRadius: 50,
+        showCoverageOnHover: false,
+        zoomToBoundsOnClick: true
+    });
+    var segmentLayer = L.layerGroup();
+    var routeLayer = L.layerGroup();
+    var airportLayer = L.layerGroup();
+
+    // 节流函数
+    function throttle(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    // 防抖函数
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    function initMap() {
+        // 初始化地图
+        map = L.map('map').setView([39.9042, 116.4074], 5);
+
+        // 添加高德地图底图
+        var高德地图 = L.tileLayer('https://webst0{s}.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}', {
+            subdomains: ['1', '2', '3', '4'],
+            attribution: '© 高德地图'
+        }).addTo(map);
+
+        // 添加航路点图层到地图
+        map.addLayer(waypointLayer);
+        // 添加导航台图层到地图
+        map.addLayer(navaidLayer);
+        // 添加机场图层到地图
+        map.addLayer(airportLayer);
+        // 添加航段图层到地图
+        map.addLayer(segmentLayer);
+        // 添加航路图层到地图
+        map.addLayer(routeLayer);
+
+        // 加载数据
+        loadWaypoints();
+        loadNavaids();
+        loadSegments();
+        loadRoutes();
+
+        // 添加地图点击事件，重置所有航路状态
+        map.on('click', function(e) {
+            routeLines.forEach(line => {
+                line.setStyle({ color: line.options.originalColor });
+                line.isActive = false;
+                line.closeTooltip();
+                line.closePopup();
+            });
+        });
+
+        // 添加地图事件监听，确保所有图层随地图同步更新
+        map.on('zoomend moveend', debounce(function(e) {
+            // 重新渲染图层以确保坐标对齐
+            if (waypointLayer) {
+                waypointLayer.refreshClusters();
+            }
+            if (navaidLayer) {
+                navaidLayer.refreshClusters();
+            }
+            // 重新渲染航路图层以解决不同步问题
+            if (routeLayer) {
+                // 移除并重新添加航路图层，确保与地图同步
+                map.removeLayer(routeLayer);
+                map.addLayer(routeLayer);
+            }
+        }, 100));
+    }
+
+    function loadWaypoints() {
+        // 清除现有标记
+        clearWaypointMarkers();
+
+        // 从服务器获取航路点数据
+        fetch('/api/waypoints')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    data.waypoints.forEach(waypoint => {
+                        // 创建标记
+                        var marker = L.marker([waypoint.Latitude, waypoint.Longitude])
+                            .bindTooltip(`
+                                <b>航路点 ID:</b> ${waypoint.WaypointID}<br>
+                                <b>名称:</b> ${waypoint.Name}<br>
+                                <b>纬度:</b> ${waypoint.Latitude}<br>
+                                <b>经度:</b> ${waypoint.Longitude}<br>
+                                <b>状态:</b> ${waypoint.IsActive ? '活跃' : '非活跃'}
+                            `, { permanent: false, direction: 'top' })
+                            .bindPopup(`
+                                <b>航路点 ID:</b> ${waypoint.WaypointID}<br>
+                                <b>名称:</b> ${waypoint.Name}<br>
+                                <b>纬度:</b> ${waypoint.Latitude}<br>
+                                <b>经度:</b> ${waypoint.Longitude}<br>
+                                <b>状态:</b> ${waypoint.IsActive ? '活跃' : '非活跃'}
+                            `);
+                        
+                        // 添加点击事件，实现标签的固定和消失
+                        var isPopupOpen = false;
+                        marker.on('click', function(e) {
+                            if (isPopupOpen) {
+                                this.closePopup();
+                                isPopupOpen = false;
+                            } else {
+                                this.openPopup();
+                                isPopupOpen = true;
+                            }
+                        });
+                        
+                        waypointMarkers.push(marker);
+                        waypointLayer.addLayer(marker);
+                    });
+
+                    // 如果有数据，调整地图视野以显示所有标记
+                    if (data.waypoints.length > 0) {
+                        var bounds = L.latLngBounds();
+                        data.waypoints.forEach(waypoint => {
+                            bounds.extend([waypoint.Latitude, waypoint.Longitude]);
+                        });
+                        map.fitBounds(bounds, { padding: [50, 50] });
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('加载航路点数据失败:', error);
+            });
+    }
+
+    function loadNavaids() {
+        // 清除现有标记
+        clearNavaidMarkers();
+
+        // 从服务器获取导航台数据
+        fetch('/api/navaids')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    data.navaids.forEach(navaid => {
+                        // 创建自定义图标
+                        var navaidIcon = L.divIcon({
+                            className: 'navaid-icon',
+                            html: '<div style="background: red; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;">N</div>',
+                            iconSize: [20, 20],
+                            iconAnchor: [10, 10]
+                        });
+
+                        // 创建标记
+                        var marker = L.marker([navaid.Latitude, navaid.Longitude], { icon: navaidIcon })
+                            .bindTooltip(`
+                                <b>导航台 ID:</b> ${navaid.NavaidID}<br>
+                                <b>台名称:</b> ${navaid.WaypointName}<br>
+                                <b>导航台类型:</b> VOR/DME<br>
+                                <b>纬度:</b> ${navaid.Latitude}<br>
+                                <b>经度:</b> ${navaid.Longitude}<br>
+                                <b>频率:</b> ${navaid.Frequency}
+                            `, { permanent: false, direction: 'top' })
+                            .bindPopup(`
+                                <b>导航台 ID:</b> ${navaid.NavaidID}<br>
+                                <b>台名称:</b> ${navaid.WaypointName}<br>
+                                <b>导航台类型:</b> VOR/DME<br>
+                                <b>纬度:</b> ${navaid.Latitude}<br>
+                                <b>经度:</b> ${navaid.Longitude}<br>
+                                <b>频率:</b> ${navaid.Frequency}
+                            `);
+                        
+                        // 添加点击事件，实现标签的固定和消失
+                        var isPopupOpen = false;
+                        marker.on('click', function(e) {
+                            if (isPopupOpen) {
+                                this.closePopup();
+                                isPopupOpen = false;
+                            } else {
+                                this.openPopup();
+                                isPopupOpen = true;
+                            }
+                        });
+                        
+                        navaidMarkers.push(marker);
+                        navaidLayer.addLayer(marker);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('加载导航台数据失败:', error);
+            });
+    }
+
+    function clearWaypointMarkers() {
+        waypointLayer.clearLayers();
+        waypointMarkers = [];
+    }
+
+    function clearNavaidMarkers() {
+        navaidLayer.clearLayers();
+        navaidMarkers = [];
+    }
+
+    function loadSegments() {
+        // 清除现有航段
+        clearSegmentLines();
+
+        // 从服务器获取航段数据
+        fetch('/api/segments')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    data.segments.forEach(segment => {
+                        // 创建航线路径
+                        var latlngs = [
+                            [segment.StartLatitude, segment.StartLongitude],
+                            [segment.EndLatitude, segment.EndLongitude]
+                        ];
+
+                        // 创建线段
+                        var line = L.polyline(latlngs, {
+                            color: 'blue',
+                            weight: 3,
+                            opacity: 0.7,
+                            dashArray: ''
+                        }).addTo(segmentLayer);
+
+                        // 添加悬停提示和弹出信息
+                        line.bindTooltip(`
+                            <b>航段 ID:</b> ${segment.SegmentID}<br>
+                            <b>起点:</b> ${segment.StartName}<br>
+                            <b>终点:</b> ${segment.EndName}<br>
+                            <b>距离:</b> ${segment.DistanceKM} KM<br>
+                            <b>最低飞行高:</b> ${segment.MinAltitude} M<br>
+                        `, { permanent: false, direction: 'top' })
+                        .bindPopup(`
+                            <b>航段 ID:</b> ${segment.SegmentID}<br>
+                            <b>起点:</b> ${segment.StartName} (${segment.StartWaypointID})<br>
+                            <b>终点:</b> ${segment.EndName} (${segment.EndWaypointID})<br>
+                            <b>航段:</b> ${segment.StartName} => ${segment.EndName} <br>
+                            <b>距离:</b> ${segment.DistanceKM} KM<br>
+                            <b>方向:</b> ${segment.Direction}<br>
+                            <b>最低飞行高:</b> ${segment.MinAltitude} M<br>
+                        `);
+                        
+                        // 添加点击事件，实现标签的固定和消失
+                        var isPopupOpen = false;
+                        line.on('click', function(e) {
+                            if (isPopupOpen) {
+                                this.closePopup();
+                                isPopupOpen = false;
+                            } else {
+                                this.openPopup();
+                                isPopupOpen = true;
+                            }
+                        });
+                        
+                        segmentLines.push(line);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('加载航段数据失败:', error);
+            });
+    }
+
+    function clearSegmentLines() {
+        segmentLayer.clearLayers();
+        segmentLines = [];
+    }
+
+    function toggleWaypointLayer() {
+        var checkbox = document.getElementById('waypointLayer');
+        if (checkbox.checked) {
+            map.addLayer(waypointLayer);
+        } else {
+            map.removeLayer(waypointLayer);
+        }
+    }
+
+    function toggleNavaidLayer() {
+        var checkbox = document.getElementById('navaidLayer');
+        if (checkbox.checked) {
+            map.addLayer(navaidLayer);
+        } else {
+            map.removeLayer(navaidLayer);
+        }
+    }
+
+    function toggleSegmentLayer() {
+        var checkbox = document.getElementById('segmentLayer');
+        if (checkbox.checked) {
+            map.addLayer(segmentLayer);
+        } else {
+            map.removeLayer(segmentLayer);
+        }
+    }
+
+    function toggleRouteLayer() {
+        var checkbox = document.getElementById('routeLayer');
+        if (checkbox.checked) {
+            map.addLayer(routeLayer);
+        } else {
+            map.removeLayer(routeLayer);
+        }
+    }
+
+    function toggleAirportLayer() {
+        var checkbox = document.getElementById('airportLayer');
+        if (checkbox.checked) {
+            map.addLayer(airportLayer);
+        } else {
+            map.removeLayer(airportLayer);
+        }
+    }
+
+    function loadRoutes() {
+        // 清除现有航路
+        clearRouteLines();
+
+        // 从服务器获取航路数据
+        fetch('/api/routes')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('加载到航路数据:', data.routes.length, '条');
+                    data.routes.forEach(route => {
+                        // 为每个航路创建路径
+                        var latlngs = [];
+                        var segmentInfo = [];
+
+                        // 收集所有航段的坐标点
+                        route.Segments.forEach(segment => {
+                            latlngs.push([segment.StartLatitude, segment.StartLongitude]);
+                            latlngs.push([segment.EndLatitude, segment.EndLongitude]);
+                            
+                            segmentInfo.push({
+                                sequence: segment.SequenceNumber,
+                                startName: segment.StartName,
+                                endName: segment.EndName,
+                                isReversed: segment.IsReversed
+                            });
+                        });
+
+                        // 确定航路颜色
+                        var routeColor = route.RouteType === 'DOMESTIC' ? 'cyan' : 'red';
+
+                        // 创建航路主线
+                        var line = L.polyline(latlngs, {
+                            color: routeColor,
+                            weight: 8,
+                            opacity: 0.8,
+                            dashArray: '',
+                            interactive: true
+                        }).addTo(routeLayer);
+                        
+                        console.log('创建航路:', route.RouteName, '路径点数量:', latlngs.length);
+
+                        // 添加航段箭头
+                        route.Segments.forEach(segment => {
+                            // 创建单个航段
+                            var segmentLatlngs = [
+                                [segment.StartLatitude, segment.StartLongitude],
+                                [segment.EndLatitude, segment.EndLongitude]
+                            ];
+                            
+                            // 创建航段线
+                            var segmentLine = L.polyline(segmentLatlngs, {
+                                color: routeColor,
+                                weight: 8,
+                                opacity: 0.8,
+                                dashArray: '',
+                                interactive: false
+                            });
+                            
+                            // 添加箭头
+                            if (segment.IsReversed) {
+                                // 双向航段，添加双向箭头
+                                segmentLine.addTo(routeLayer);
+                                addArrowToLine(segmentLine, routeColor, true);
+                            } else {
+                                // 单向航段，添加单向箭头
+                                segmentLine.addTo(routeLayer);
+                                addArrowToLine(segmentLine, routeColor, false);
+                            }
+                        });
+
+                        // 添加悬停提示和弹出信息
+                        var tooltipContent = `
+                            <b>航路 ID:</b> ${route.RouteID}<br>
+                            <b>名称:</b> ${route.RouteName}<br>
+                            <b>类型:</b> ${route.RouteType === 'DOMESTIC' ? '国内' : '国外'}<br>
+                            <b>起点:</b> ${route.StartWaypointName}<br>
+                            <b>终点:</b> ${route.EndWaypointName}<br>
+                            <b>航段数:</b> ${route.Segments.length}<br>
+                            <b>总距离:</b> ${route.TotalDistanceKM} KM
+                        `;
+                        
+                        // 存储原始颜色
+                        line.options.originalColor = routeColor;
+                        line.isActive = false;
+                        
+                        // 绑定tooltip
+                        line.bindTooltip(tooltipContent, { 
+                            permanent: false, 
+                            direction: 'top',
+                            sticky: true,
+                            opacity: 0.9
+                        });
+                        
+                        // 绑定popup
+                        line.bindPopup(`
+                            <b>航路详情:</b><br>
+                            <b>ID:</b> ${route.RouteID}<br>
+                            <b>名称:</b> ${route.RouteName}<br>
+                            <b>类型:</b> ${route.RouteType === 'DOMESTIC' ? '国内' : '国外'}<br>
+                            <b>起点:</b> ${route.StartWaypointName} (${route.StartWaypointID})<br>
+                            <b>终点:</b> ${route.EndWaypointName} (${route.EndWaypointID})<br>
+                            <b>总距离:</b> ${route.TotalDistanceKM} KM<br>
+                            <b>航段信息:</b><br>
+                            ${segmentInfo.map(info => `第${info.sequence}段: ${info.startName} → ${info.endName} (${info.isReversed ? '双向' : '单向'})`).join('<br>')}
+                        `);
+                        
+                        // 添加鼠标移动事件，显示标签
+                        line.on('mouseover', function(e) {
+                            this.openTooltip();
+                        });
+                        
+                        line.on('mouseout', function(e) {
+                            if (!this.isActive) {
+                                this.closeTooltip();
+                            }
+                        });
+                        
+                        // 添加点击事件，实现标签的固定和颜色变化
+                        line.on('click', function(e) {
+                            e.stopPropagation(); // 阻止事件冒泡
+                            
+                            // 重置其他所有航路
+                            routeLines.forEach(otherLine => {
+                                if (otherLine !== this) {
+                                    otherLine.setStyle({ color: otherLine.options.originalColor });
+                                    otherLine.isActive = false;
+                                    otherLine.closeTooltip();
+                                    otherLine.closePopup();
+                                }
+                            });
+                            
+                            // 处理当前航路
+                            if (this.isActive) {
+                                // 取消激活
+                                this.setStyle({ color: this.options.originalColor });
+                                this.isActive = false;
+                                this.closeTooltip();
+                                this.closePopup();
+                            } else {
+                                // 激活
+                                this.setStyle({ color: 'orange' });
+                                this.isActive = true;
+                                this.openTooltip();
+                                this.openPopup();
+                            }
+                        });
+                        
+                        routeLines.push(line);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('加载航路数据失败:', error);
+            });
+    }
+
+    function addArrowToLine(line, color, isBidirectional) {
+        // 获取线段的坐标
+        var latlngs = line.getLatLngs();
+        
+        if (latlngs.length < 2) return;
+        
+        // 计算线段的方向和中点
+        var start = latlngs[0];
+        var end = latlngs[1];
+        
+        // 创建箭头
+        var arrow = L.polyline([start, end], {
+            color: color,
+            weight: 0,
+            opacity: 0
+        });
+        
+        // 添加箭头标记
+        var arrowMarker = L.marker(end, {
+            icon: L.divIcon({
+                className: 'arrow-icon',
+                html: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 12h14"></path>
+                    <path d="m12 5 7 7-7 7"></path>
+                </svg>`,
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            })
+        }).addTo(routeLayer);
+        
+        if (isBidirectional) {
+            // 添加反向箭头
+            var reverseArrowMarker = L.marker(start, {
+                icon: L.divIcon({
+                    className: 'arrow-icon',
+                    html: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 12H5"></path>
+                        <path d="m12 19-7-7 7-7"></path>
+                    </svg>`,
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                })
+            }).addTo(routeLayer);
+        }
+    }
+
+    function clearRouteLines() {
+        routeLayer.clearLayers();
+        routeLines = [];
+    }
+
+    function refreshMap() {
+        loadWaypoints();
+        loadNavaids();
+        loadSegments();
+        loadRoutes();
+    }
+
+    // 页面加载完成后初始化地图
+    document.addEventListener('DOMContentLoaded', initMap);
+</script>
+{% endblock %}

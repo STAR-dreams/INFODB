@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>{% block title %}数字化航图平台{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <header class="main-header">
+        <div class="header-left">
+            <div class="logo">
+                <i class="fas fa-plane-departure"></i>
+                <span>数字化航图平台</span>
+            </div>
+        </div>
+        <div class="header-right">
+            {% if session.get('user_id') %}
+            <div class="user-info dropdown">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                    <i class="fas fa-user-circle"></i>
+                    <span>{{ session.get('username', '用户') }}</span>
+                    {% if session.get('is_admin') %}
+                    <span class="badge badge-admin">管理员</span>
+                    {% endif %}
+                </a>
+                <div class="dropdown-menu dropdown-menu-right">
+                    <a class="dropdown-item" href="{{ url_for('user_settings') }}">
+                        <i class="fas fa-cog"></i> 个人设置
+                    </a>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item" href="{{ url_for('logout') }}">
+                        <i class="fas fa-sign-out-alt"></i> 退出登录
+                    </a>
+                </div>
+            </div>
+            {% else %}
+            <div class="auth-buttons">
+                <a href="{{ url_for('login') }}" class="btn btn-sm btn-outline-light">
+                    <i class="fas fa-sign-in-alt"></i> 登录
+                </a>
+                <a href="{{ url_for('register') }}" class="btn btn-sm btn-outline-light ml-2">
+                    <i class="fas fa-user-plus"></i> 注册
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </header>
+
+    <div class="main-container">
+        {% if session.get('user_id') %}
+        <aside class="sidebar">
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">
+                        <i class="fas fa-layer-group"></i> 功能菜单
+                    </div>
+                    <a href="{{ url_for('dashboard') }}" class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>数据概览</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">
+                        <i class="fas fa-database"></i> 数据查看
+                    </div>
+                    <div class="nav-item-with-submenu {% if 'data_view' in request.endpoint %}active{% endif %}">
+                        <a href="#" class="nav-item has-submenu" data-toggle="collapse" data-target="#dataViewMenu">
+                            <i class="fas fa-table"></i>
+                            <span>航路数据表</span>
+{#                            <i class="fas fa-chevron-right submenu-indicator"></i>#}
+                            <i class="fas fa-chevron-right submenu-indicator"></i>
+                        </a>
+                        <div class="collapse {% if 'data_view' in request.endpoint %}show{% endif %}" id="dataViewMenu">
+                            <ul class="nav flex-column submenu">
+                                <li><a class="nav-item-sub" href="{{ url_for('data_view', table='Waypoint') }}">
+                                    <i class="fas fa-dot-circle"></i> 航路点表
+                                </a></li>
+                                {% if session.get('is_admin') %}
+                                <li><a class="nav-item-sub" href="{{ url_for('data_view', table='WaypointType') }}">
+                                    <i class="fas fa-dot-circle"></i> 航路点类型表
+                                </a></li>
+                                <li><a class="nav-item-sub" href="{{ url_for('data_view', table='WaypointTypeMapping') }}">
+                                    <i class="fas fa-dot-circle"></i> 航路点类型联系表
+                                </a></li>
+                                <li><a class="nav-item-sub" href="{{ url_for('data_view', table='NavaidInfo') }}">
+                                    <i class="fas fa-dot-circle"></i> 导航台专属属性表
+                                </a></li>
+                                {% endif %}
+                                <li><a class="nav-item-sub" href="{{ url_for('data_view', table='RouteSegment') }}">
+                                    <i class="fas fa-dot-circle"></i> 航段表
+                                </a></li>
+                                <li><a class="nav-item-sub" href="{{ url_for('data_view', table='Route') }}">
+                                    <i class="fas fa-dot-circle"></i> 航线表
+                                </a></li>
+                                {% if session.get('is_admin') %}
+                                <li><a class="nav-item-sub" href="{{ url_for('data_view', table='RouteSegmentMapping') }}">
+                                    <i class="fas fa-dot-circle"></i> 航段-航线关系表
+                                </a></li>
+                                <li><a class="nav-item-sub" href="{{ url_for('data_view', table='ChangeLog') }}">
+                                    <i class="fas fa-dot-circle"></i> 数据变更日志表
+                                </a></li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                {% if session.get('is_admin') %}
+                <div class="nav-section">
+                    <div class="nav-section-title">
+                        <i class="fas fa-cogs"></i> 数据管理
+                    </div>
+                    <div class="nav-item-with-submenu {% if 'data_manage' in request.endpoint %}active{% endif %}">
+                        <a href="#" class="nav-item has-submenu" data-toggle="collapse" data-target="#dataManageMenu">
+                            <i class="fas fa-edit"></i>
+                            <span>数据库操作</span>
+                            <i class="fas fa-chevron-right submenu-indicator"></i>
+                        </a>
+                        <div class="collapse {% if 'data_manage' in request.endpoint %}show{% endif %}" id="dataManageMenu">
+                            <ul class="nav flex-column submenu">
+                                <li><a class="nav-item-sub" href="{{ url_for('data_manage', table='Waypoint', action='add') }}">
+                                    <i class="fas fa-plus-circle"></i> 添加航路点
+                                </a></li>
+                                <li><a class="nav-item-sub" href="{{ url_for('data_manage', table='WaypointType', action='add') }}">
+                                    <i class="fas fa-plus-circle"></i> 添加航路点类型
+                                </a></li>
+                                <li><a class="nav-item-sub" href="{{ url_for('data_manage', table='NavaidInfo', action='add') }}">
+                                    <i class="fas fa-plus-circle"></i> 添加导航台信息
+                                </a></li>
+                                <li><a class="nav-item-sub" href="{{ url_for('data_manage', table='RouteSegment', action='add') }}">
+                                    <i class="fas fa-plus-circle"></i> 添加航段
+                                </a></li>
+                                <li><a class="nav-item-sub" href="{{ url_for('data_manage', table='Route', action='add') }}">
+                                    <i class="fas fa-plus-circle"></i> 添加航线
+                                </a></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="nav-item-with-submenu {% if 'data_manage' in request.endpoint %}active{% endif %}">
+                        <a href="#" class="nav-item has-submenu" data-toggle="collapse" data-target="#databaseViewMenu">
+                            <i class="fas fa-database"></i>
+                            <span>数据库视图</span>
+                            <i class="fas fa-chevron-right submenu-indicator"></i>
+                        </a>
+                        <div class="collapse {% if 'data_manage' in request.endpoint %}show{% endif %}" id="databaseViewMenu">
+                            <ul class="nav flex-column submenu">
+                                <li><a class="nav-item-sub" href="{{ url_for('db_view.database_view') }}">
+                                    <i class="fas fa-table"></i> 航路点数据视图
+                                </a></li>
+                                <li><a class="nav-item-sub" href="{{ url_for('db_view.database_view', table='Route') }}">
+                                    <i class="fas fa-plus-circle"></i> 航路数据视图
+                                </a></li>
+                            </ul>
+                        </div>
+
+                    <a href="{{ url_for('users') }}" class="nav-item {% if request.endpoint == 'users' %}active{% endif %}">
+                        <i class="fas fa-users-cog"></i>
+                        <span>用户管理</span>
+                    </a>
+                </div>
+                {% endif %}
+
+                <div class="nav-section">
+                    <div class="nav-section-title">
+                        <i class="fas fa-map-marked-alt"></i> 可视化
+                    </div>
+                    <a href="{{ url_for('graph_redact_page') }}" class="nav-item {% if request.endpoint == 'graph_redact_page' %}active{% endif %}">
+                        <i class="fas fa-draw-polygon"></i>
+                        <span>图层编辑</span>
+                    </a>
+                    <a href="{{ url_for('draw_page') }}" class="nav-item {% if request.endpoint == 'draw_page' %}active{% endif %}">
+                        <i class="fas fa-globe-asia"></i>
+                        <span>可视化显示</span>
+                    </a>
+                </div>
+
+                {% if session.get('is_admin') %}
+                <div class="nav-section">
+                    <div class="nav-section-title">
+                        <i class="fas fa-history"></i> 日志
+                    </div>
+                    <a href="{{ url_for('data_view', table='ChangeLog') }}" class="nav-item {% if request.endpoint == 'data_view' and request.view_args.table == 'ChangeLog' %}active{% endif %}">
+                        <i class="fas fa-list-alt"></i>
+                        <span>变更日志</span>
+                    </a>
+                </div>
+                {% endif %}
+            </nav>
+        </aside>
+        {% endif %}
+
+        <main class="content-wrapper {% if not session.get('user_id') %}no-sidebar{% endif %}">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <footer class="main-footer">
+        <div class="footer-content">
+            <span class="footer-left">
+{#                <i class="fas fa-copyright"></i> 2025-2026 数字化航图平台 | 航空情报数据模型及数据库技术#}
+                <i class="fas fa-copyright"></i> 数字化航图平台 | 航空情报数据
+            </span>
+            <span class="footer-right">
+{#                <i class="fas fa-code"></i> Powered by Flask & Bootstrap#}
+            </span>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.min.js"></script>
+    <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
